@@ -31,20 +31,19 @@ class App():
     def __init__(self):
         parser = argparse.ArgumentParser(description='boomstream.com downloader')
         parser.add_argument('--url', type=str, required=True)
-        parser.add_argument('--pin', type=str, required=True)
         parser.add_argument('--use-cache', action='store_true', required=False)
         parser.add_argument('--resolution', type=str, required=False)
         self.args = parser.parse_args()
 
     def get_token(self):
-        if 'records' in self.config['mediaData'] and len(self.config['mediaData']['records']) > 0:
-            return b64decode(self.config['mediaData']['records'][0]['token']).decode('utf-8')
+        if 'records' in self.config['mediaData'] and len(self.config['mediaData']['posters']) > 0:
+            return b64decode(self.config['mediaData']['posters'][0]['token']).decode('utf-8')
         else:
             return b64decode(self.config['mediaData']['token']).decode('utf-8')
 
     def get_m3u8_url(self):
-        if 'records' in self.config['mediaData'] and len(self.config['mediaData']['records']) > 0:
-            return b64decode(self.config['mediaData']['records'][0]['links']['hls']).decode('utf-8')
+        if 'records' in self.config['mediaData'] and len(self.config['mediaData']['posters']) > 0:
+            return b64decode(self.config['mediaData']['posters'][0]['links']['hls']).decode('utf-8')
         else:
             return b64decode(self.config['mediaData']['links']['hls']).decode('utf-8')
 
@@ -242,7 +241,7 @@ class App():
             page = r.text
 
         self.config = self.get_boomstream_config(page)
-        if len(self.config['mediaData']['records']) == 0:
+        if len(self.config['mediaData']['posters']) == 0:
             print("Video record is not available. Probably, the live streaming" \
                   "has not finished yet. Please, try to download once the translation" \
                   "is finished." \
