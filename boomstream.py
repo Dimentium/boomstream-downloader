@@ -223,8 +223,7 @@ class App():
         """
         print("Merging chunks...")
         os.system("cat %s/*.ts > %s.ts" % (key, key,))
-        print("Encoding to MP4")
-        os.system('ffmpeg -i %s.ts -c copy "%s".mp4' % (key, self.get_title(),))
+        os.system('mv %s.ts "%s".mp4' % (key, self.get_title(),))
 
     def get_title(self):
         return self.config['entity']['title']
