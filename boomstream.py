@@ -5,7 +5,7 @@ import re
 import sys
 import json
 import time
-import argparse
+import requests
 from base64 import b64decode
 from lxml.html import fromstring
 
@@ -14,72 +14,37 @@ import requests
 XOR_KEY = 'bla_bla_bla'
 
 headers = {
-  'authority': 'play.boomstream.com',
-  'pragma': 'no-cache',
-  'cache-control': 'no-cache',
-  'upgrade-insecure-requests': '1',
-  'user-agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.92 Safari/537.36',
-  'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9',
-  'sec-fetch-site': 'none',
-  'sec-fetch-mode': 'navigate',
-  'sec-fetch-user': '?1',
-  'sec-fetch-dest': 'document',
-  'accept-language': 'en-US,en;q=0.9,ru;q=0.8,es;q=0.7,de;q=0.6'}
+    'authority': 'play.boomstream.com',
+    'path': '/sfQngWtf/config?version=1.2.84',
+    'origin': 'https://otus.ru',
+    'accept-encoding': 'gzip, deflate, br',
+    'referer': 'https://otus.ru/',
+    'accept-language': 'ru',
+}
 
 class App():
 
-    def __init__(self):
-        parser = argparse.ArgumentParser(description='boomstream.com downloader')
-        parser.add_argument('--url', type=str, required=True)
-        parser.add_argument('--use-cache', action='store_true', required=False)
-        parser.add_argument('--resolution', type=str, required=False)
-        self.args = parser.parse_args()
-
     def get_token(self):
         if 'records' in self.config['mediaData'] and len(self.config['mediaData']['posters']) > 0:
-            return b64decode(self.config['mediaData']['posters'][0]['token']).decode('utf-8')
+            return b64decode(self.config['mediaData']['posters'][4]['token']).decode('utf-8')
         else:
             return b64decode(self.config['mediaData']['token']).decode('utf-8')
 
     def get_m3u8_url(self):
         if 'records' in self.config['mediaData'] and len(self.config['mediaData']['posters']) > 0:
-            return b64decode(self.config['mediaData']['posters'][0]['links']['hls']).decode('utf-8')
+            return b64decode(self.config['mediaData']['posters'][4]['links']['hls']).decode('utf-8')
         else:
             return b64decode(self.config['mediaData']['links']['hls']).decode('utf-8')
 
-    def get_boomstream_config(self, page):
-        """
-        Evals value assigned to window.boomstreamConfig variable as JSON. This is ugly,
-        but still better than using regular expressions to extract all needed variables
-        from HTML page.
-        """
-        html = fromstring(page)
-        result = None
-
-        for script in html.xpath('//script[@type="text/javascript"]'):
-            m = re.search("window.boomstreamConfig = ({.*});$", script.text_content(), flags=re.M)
-            if m is not None:
-                result = json.loads(m.group(1))
-
-        if result is None:
-            raise Exception("Could not get boomstreamConfig from the main page")
-
-        with open('boomstream.config.json', 'wt') as f:
-            del result["translations"]
-            f.write(json.dumps(result, ensure_ascii=False, indent=4))
+    def get_boomstream_config(self):
+        f = open ('boomstream.config.json', "r")
+        result = json.loads(f.read())
+        del result["translations"]
 
         return result
 
     def get_playlist(self, url):
-        if self.args.use_cache and os.path.exists('boomstream.playlist.m3u8'):
-            return open('boomstream.playlist.m3u8').read()
-
-        r = requests.get(url, headers=headers)
-
-        with open('boomstream.playlist.m3u8', 'wt') as f:
-            f.write(r.text)
-
-        return r.text
+        return requests.get(url, headers=headers).text
 
     def res2int(self, resolution):
         if 'x' in resolution:
@@ -113,33 +78,13 @@ class App():
         print("This video is available in the following resolutions: %s" % \
                 ", ".join(i[0] for i in all_chunklists))
 
-        if self.args.resolution is not None:
-            url = None
-            for item in all_chunklists:
-                if item[0] == self.args.resolution:
-                    url = item[1]
-                    break
-            if url is None:
-                raise Exception("Playlist for resolution specifeid is --resolution " \
-                                "argument is not found")
-        else:
-            # If the resolution is not specified in args, pick the best one
-            url = sorted(all_chunklists, key=lambda x: x[2])[-1][1]
+        url = sorted(all_chunklists, key=lambda x: x[2])[-1][1]
 
         print("URL: %s" % url)
 
         if url is None:
             raise Exception("Could not find chunklist in playlist data")
-
-        if self.args.use_cache and os.path.exists('boomstream.chunklist.m3u8'):
-            return open('boomstream.chunklist.m3u8').read()
-
-        r = requests.get(url, headers=headers)
-
-        with open('boomstream.chunklist.m3u8', 'wt') as f:
-            f.write(r.text)
-
-        return r.text
+        return requests.get(url, headers=headers).text
 
     def get_xmedia_ready(self, chunklist):
         """
@@ -229,17 +174,7 @@ class App():
         return self.config['entity']['title']
 
     def run(self):
-        if self.args.use_cache and os.path.exists('result.html'):
-            page = open('result.html').read()
-        else:
-            r = requests.get(self.args.url, headers=headers)
-
-            with open('result.html', 'wt') as f:
-                f.write(r.text)
-
-            page = r.text
-
-        self.config = self.get_boomstream_config(page)
+        self.config = self.get_boomstream_config()
         if len(self.config['mediaData']['posters']) == 0:
             print("Video record is not available. Probably, the live streaming" \
                   "has not finished yet. Please, try to download once the translation" \
