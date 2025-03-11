@@ -39,7 +39,6 @@ class App():
     def get_boomstream_config(self):
         f = open ('boomstream.config.json', "r")
         result = json.loads(f.read())
-        del result["translations"]
 
         return result
 
