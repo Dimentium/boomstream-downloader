@@ -1,0 +1,20 @@
+[project]
+name = "boomstream-downloader"
+description = "boomstream.com video downloader"
+version = "0.1.0"
+keywords = ["boomstream", "downloader"]
+readme = "README.md"
+requires-python = ">=3.6"
+dependencies = [
+    "requests>=2.27.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/dimentium/boomstream-downloader"
+Repository = "https://github.com/dimentium/boomstream-downloader"
+
+[tool.ruff]
+line-length = 120
+
+[tool.ruff.format]
+quote-style = "single"
