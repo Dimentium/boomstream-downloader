@@ -14,12 +14,12 @@ from pathlib import Path
 from typing import Any
 
 
-DEBUG = os.getenv('BOOMSTREAM_DEBUG', False)
-MAX_RETRIES = 5
-XOR_KEY = 'bla_bla_bla'
+DEBUG: bool = bool(os.getenv('BOOMSTREAM_DEBUG', False))
+MAX_RETRIES: int = 5
+XOR_KEY: str = 'bla_bla_bla'
 
 
-def setup_logging(verbose=False) -> logging.Logger:
+def setup_logging(verbose: bool = False) -> logging.Logger:
     log_level = logging.DEBUG if verbose else logging.INFO
 
     logger = logging.getLogger()
@@ -130,7 +130,8 @@ class Downloader:
         return True
 
     def run(self) -> bool:
-        self.logger.info(self)
+        self.logger.info(f'Title: {self.title}')
+        self.logger.debug(self)
 
         if not self._check_live_translation():
             return False
@@ -195,12 +196,13 @@ class Downloader:
         playlist = requests.get(self.m3u8_url, headers=self.headers).text
 
         all_chunklists = self._extract_chunklist_urls(playlist)
-        self.logger.info(
+        self.logger.debug(
             f'This video is available in the following resolutions: {", ".join(i[0] for i in all_chunklists)}'
         )
+        self.logger.info(f'Resolution: {max(all_chunklists, key=lambda x: x[2])[0]}')
 
         url = max(all_chunklists, key=lambda x: x[2])[1]
-        self.logger.info(f'URL: {url}')
+        self.logger.debug(f'URL: {url}')
 
         if not url:
             raise ValueError('Empty chunklist URL found')
@@ -232,10 +234,10 @@ class Downloader:
         except StopIteration:
             raise ValueError("Could not find '#EXT-X-MEDIA-READY:' in chunklist")
 
-        self.logger.info(f'X-MEDIA-READY: {xmedia_ready}')
+        self.logger.debug(f'X-MEDIA-READY: {xmedia_ready}')
 
         decr = self._decrypt(xmedia_ready, XOR_KEY)
-        self.logger.info(f'Decrypted X-MEDIA-READY: {decr}')
+        self.logger.debug(f'Decrypted X-MEDIA-READY: {decr}')
 
         prefix = decr[0:20]
         iv_bytes = decr[20:36]
@@ -244,11 +246,11 @@ class Downloader:
         encrypted_data = self._encrypt(prefix + self.token, XOR_KEY)
         key_url = f'https://play.boomstream.com/api/process/{encrypted_data}'
 
-        self.logger.info(f'key url = {key_url}')
+        self.logger.debug(f'key url = {key_url}')
         key = requests.get(key_url, headers=self.headers).text
 
-        self.logger.info(f'IV = {iv}')
-        self.logger.info(f'Key = {key}')
+        self.logger.debug(f'IV = {iv}')
+        self.logger.debug(f'Key = {key}')
 
         return iv, key
 
@@ -266,7 +268,7 @@ class Downloader:
         urls = [line for line in chunklist.split('\n') if line.startswith('https://')]
 
         chunks = len(urls)
-        self.logger.info(f'Chunks number: {chunks}')
+        self.logger.info(f'Chunks to download: {chunks}')
 
         for i, url in enumerate(urls):
             outf = key_dir / f'{i:05d}.ts'
@@ -287,14 +289,15 @@ class Downloader:
                 if result.returncode == 0:
                     break
                 else:
-                    self.logger.info(f'curl return code: {result.returncode}. attempts: {attempt}/{MAX_RETRIES}')
+                    self.logger.warning(f'curl return code: {result.returncode}. attempts: {attempt}/{MAX_RETRIES}')
 
                 if attempt == MAX_RETRIES:
                     self.logger.error(f'Failed to download URL: {url} in {MAX_RETRIES} attempt. Skipped.')
                     return False
 
-        sys.stdout.write('')
+        sys.stdout.write(f'\r{" " * 60}\r')
         sys.stdout.flush()
+        self.logger.info('All chunks successfully downloaded.')
         return True
 
     def _merge_chunks(self, key) -> bool:
@@ -351,16 +354,17 @@ def process_directory(dir_path: str) -> None:
 
     if files:
         logger.info(f'Files to procced: {files}')
+        logger.info('-' * 50)
 
     for file_name in sorted(files):
         file_path = os.path.join(dir_path, file_name)
-        logger.info(f'Processing file {file_path}.')
+        logger.info(f'Processing file `{file_path}`.')
         file_processed = process_file(file_path)
         if file_processed:
             os.rename(file_path, f'{file_path}.done')
-            logger.info(f'File {file_path} processed successfully.')
+            logger.info(f'File `{file_path}` processed successfully.')
         else:
-            logger.warning(f'File {file_path} not processed.')
+            logger.warning(f'File `{file_path}` not processed.')
 
 
 def main() -> None:

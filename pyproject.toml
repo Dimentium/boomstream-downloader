@@ -1,7 +1,7 @@
 [project]
 name = "boomstream-downloader"
 description = "boomstream.com video downloader"
-version = "0.1.0"
+version = "0.1.1"
 keywords = ["boomstream", "downloader"]
 readme = "README.md"
 requires-python = ">=3.6"
