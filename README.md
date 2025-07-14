@@ -1,40 +1,78 @@
-# boomstream.com video downloader
+# Boomstream Video Downloader
 
-The script downloads videos from boomstream.com streaming service.
+A Python tool to download videos from boomstream.com streaming service.
 
-## Encryption algorithm description
+Based on:
+- https://github.com/cleeque/boomstream-downloader (original code)
+- https://github.com/kuznetsovin/boomstream-downloader (latest fork)
 
-The service stores video chunks encrypted using HLS AES-128 algorithm. In order to decrypt
-them AES initialization vector and 128-bit key are required. Initialization vector is encrypted
-in the first part of `#EXT-X-MEDIA-READY` variable which is contained in m3u8 playlist using a
-simple XOR operation. The key is supposed to be recevied via HTTP using a URL that starts with
-`https://play.boomstream.com/api/process/` and contains a long hex key that can be computed
-using session token and the second part of `#EXT-X-MEDIA-READY`.
+## Features
+
+- Downloads videos from boomstream.com with the highest available resolution
+- Handles HLS AES-128 encrypted video chunks
+- Supports both individual file and batch directory processing
+- Automatically merges downloaded chunks into a single video file
+
+## Encryption Algorithm
+
+The service stores video chunks encrypted using HLS AES-128 algorithm. To decrypt them:
+1. AES initialization vector is extracted from the first part of `#EXT-X-MEDIA-READY` variable in the m3u8 playlist using XOR decryption
+2. The 128-bit key is retrieved via HTTP from a URL that starts with `https://play.boomstream.com/api/process/`
+
+## Execution
+
+### Installation using [uv/uvx](https://docs.astral.sh/uv/#tool-management) (recommended)
+
+```bash
+# One-time install:
+uv tool install git+https://github.com/Dimentium/boomstream-downloader
+```
+
+### Without installation:
+
+```bash
+uvx --from git+https://github.com/Dimentium/boomstream-downloader bsdl
+```
 
 ## Usage
 
-Spicify `--url` and `--pin` in command line arguments:
-
 ```bash
-https://play.boomstream.com/TiAR7aDs?ppv=EswAWlFa --pin 123-456-789
+# Process a single file
+bsdl --file <path_to_boomstream_config_file>
+# or simply
+bsdl <path_to_boomstream_config_file>
+
+# Process all files in a directory (only files without extensions)
+bsdl --dir <directory_path>
 ```
 
-You can also specify a resolution using `--resolution` command line argument:
+### Getting the Config File
 
-```bash
-https://play.boomstream.com/TiAR7aDs?ppv=EswAWlFa --pin 123-456-789 --resolution "640x360"
-```
+You need a file containing the boomstreamConfig. This can be:
+- `boomstream.config.json` file
+- Full HTML page from `https://play.boomstream.com/0fabQfiA?title=0`
 
-If resolution is not specified, the video with a highest one will be dowloaded.
+To get the file from your browser:
+1. Open Developer Console (Network tab)
+2. Find the page request
+3. Save the response:
+   - Safari: "Save file"
+   - Firefox: "Save Response As"
+   - Chrome: "Save as"
 
 ## Requirements
 
-* openssl
+* Python 3.6+
 * curl
-* python-requests
-* lxml
-* ffmpeg (for enconding ts -> mp4)
+* openssl
+* requests library
 
-As the script was written and tested in Linux (specifically Ubuntu 18.04.4 LTS) it uses GNU/Linux
-`cat` tool to merge the video pieces into one single file. I think this is the only thing that prevents
-it from running in Windows. If you have time to make a PR to fix that I will really appreciate.
+## Environment Variables
+
+- `BOOMSTREAM_DEBUG`: Set to any value to enable debug logging
+
+## Notes
+
+- The script was tested on macOS 15.4
+- Uses GNU/Linux `cat` tool to merge video pieces
+- Successfully processed files are renamed with a `.done` extension when using batch mode

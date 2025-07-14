@@ -13,8 +13,12 @@ dependencies = [
 Homepage = "https://github.com/dimentium/boomstream-downloader"
 Repository = "https://github.com/dimentium/boomstream-downloader"
 
+[project.scripts]
+bsdl = "boomstream:main"
+
 [tool.ruff]
 line-length = 120
 
 [tool.ruff.format]
 quote-style = "single"
+
